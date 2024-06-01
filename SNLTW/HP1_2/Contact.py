@@ -1,7 +1,5 @@
-# Khởi tạo danh bạ rỗng
 danh_ba = []
 
-# Vòng lặp chính
 while True:
     print("\n--- Quản lý danh bạ điện thoại ---")
     print("1. Hiển thị danh bạ")
@@ -13,7 +11,6 @@ while True:
     lua_chon = input("Nhập lựa chọn (1-5): ")
 
     if lua_chon == "1":
-        # Hiển thị danh bạ
         print("Danh bạ điện thoại:")
         if not danh_ba:
             print("Danh bạ trống.")
@@ -22,7 +19,6 @@ while True:
                 print(f"{ten}: {sdt}")
 
     elif lua_chon == "2":
-        # Thêm liên hệ mới
         ten = input("Nhập tên: ")
         ten_xu_ly = ""
         dau_cach = True
@@ -55,7 +51,6 @@ while True:
             print("Không tìm thấy liên hệ.")
 
     elif lua_chon == "4":
-        # Xóa liên hệ
         ten = input("Nhập tên liên hệ cần xóa: ")
         xoa_thanh_cong = False
         for i, (t, sdt) in enumerate(danh_ba):
