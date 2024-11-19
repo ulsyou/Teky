@@ -18,3 +18,5 @@ print(f"Điểm trung bình của {ten} là: {diem_trung_binh:.2f}")
 print("="*40)
 print("Kết thúc chương trình".center(40))
 print("="*40)
+
+print("Hello World")
