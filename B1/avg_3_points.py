@@ -20,4 +20,6 @@ print("Kết thúc chương trình".center(40))
 print("="*40)
 
 print("Hello World")
+print("Hello There")
+
 print("="*40)
