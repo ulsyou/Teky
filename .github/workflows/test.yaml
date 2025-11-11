@@ -1,0 +1,99 @@
+name: EasyPark — Manual Run (Echo Simulation)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_time:
+        description: "Run time (HH:MM, 24h) in Asia/Ho_Chi_Minh timezone. Leave empty to run immediately."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      run_immediately: ${{ steps.run_time.outputs.run_immediately }}
+      wait_seconds: ${{ steps.run_time.outputs.wait_seconds }}
+    steps:
+      - name: Compute run_time (optional)
+        id: run_time
+        run: |
+          RT="${{ github.event.inputs.run_time || '' }}"
+
+          # Empty -> run immediately
+          if [[ -z "$RT" ]] || [[ "$RT" == "@" ]]; then
+            echo "run_immediately=true" >> "$GITHUB_OUTPUT"
+            echo "wait_seconds=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Validate HH:MM
+          if ! echo "$RT" | grep -E -q '^[0-2][0-9]:[0-5][0-9]$'; then
+            echo "Invalid time format for run_time: '$RT'. Use HH:MM (24h) in Asia/Ho_Chi_Minh." >&2
+            exit 1
+          fi
+
+          NOW_EPOCH=$(date +%s)
+          TARGET_EPOCH=$(TZ='Asia/Ho_Chi_Minh' date -d "today $RT" +%s 2>/dev/null || true)
+
+          if [[ -z "$TARGET_EPOCH" ]]; then
+            echo "Failed to parse target time '$RT' in Asia/Ho_Chi_Minh." >&2
+            exit 1
+          fi
+
+          if [ "$TARGET_EPOCH" -le "$NOW_EPOCH" ]; then
+            TARGET_EPOCH=$(TZ='Asia/Ho_Chi_Minh' date -d "tomorrow $RT" +%s)
+          fi
+
+          WAIT=$((TARGET_EPOCH - NOW_EPOCH))
+
+          # Safety cap: 7 days
+          MAX_WAIT=$((60*60*24*7))
+          if [ "$WAIT" -gt "$MAX_WAIT" ]; then
+            echo "Requested wait ($WAIT s) exceeds maximum allowed ($MAX_WAIT s)." >&2
+            exit 1
+          fi
+
+          echo "run_immediately=false" >> "$GITHUB_OUTPUT"
+          echo "wait_seconds=$WAIT" >> "$GITHUB_OUTPUT"
+          echo "Will wait $WAIT seconds until $RT Asia/Ho_Chi_Minh."
+
+  simulate-run:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Wait until requested run_time (if provided)
+        if: needs.setup.outputs.run_immediately == 'false'
+        run: |
+          WAIT=${{ needs.setup.outputs.wait_seconds }}
+          if [ -z "$WAIT" ]; then
+            echo "No wait seconds provided, continuing."
+            exit 0
+          fi
+          MAX_WAIT=$((60*60*24*7))
+          if [ "$WAIT" -gt "$MAX_WAIT" ]; then
+            echo "Wait exceeds maximum allowed. Aborting." >&2
+            exit 1
+          fi
+          echo "Sleeping for $WAIT seconds until requested run_time..."
+          sleep "$WAIT"
+
+      - name: Checkout (optional, kept minimal)
+        uses: actions/checkout@v4
+
+      - name: Echo — simulate pipeline run
+        run: |
+          echo "========================================"
+          echo "Simulated EasyPark pipeline run"
+          echo "Triggered by run_id: $GITHUB_RUN_ID"
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Ref: $GITHUB_REF"
+          echo "Run started at: $(date -u) (UTC)"
+          echo "Local runner time: $(date)"
+          echo "If you provided run_time, this run waited until that time (Asia/Ho_Chi_Minh)."
+          echo "Replace this echo step with your real pipeline steps."
+          echo "========================================"
